@@ -9,27 +9,27 @@
 ![Image text](https://i.imgur.com/aw49zAB.png)
 
 # img2img (800x1200 ⮕ 1200x1800 Blonde)
-* Script/SD-Upscale
-<p align="center">
-  <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
-  <img src="https://i.imgur.com/rHJGLuq.jpeg" alt="Image text" width="48%" />
-</p>
-
 * img2img-hires-fix
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
   <img src="https://i.imgur.com/brY5QYw.jpeg" alt="Image text" width="48%" />
 </p>
 
-# text2img (800x1200 ⮕ 1200x1800)
-* Hires. fix
+* Original
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
-  <img src="https://i.imgur.com/3bMUwe0.jpeg" alt="Image text" width="48%" />
+  <img src="https://i.imgur.com/rHJGLuq.jpeg" alt="Image text" width="48%" />
 </p>
 
+# text2img (800x1200 ⮕ 1200x1800)
 * img2img-hires-fix
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
   <img src="https://i.imgur.com/jggjAAV.jpeg" alt="Image text" width="48%" />
+</p>
+
+* Original
+<p align="center">
+  <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
+  <img src="https://i.imgur.com/3bMUwe0.jpeg" alt="Image text" width="48%" />
 </p>
