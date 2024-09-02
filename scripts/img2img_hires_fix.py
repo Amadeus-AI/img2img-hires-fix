@@ -31,7 +31,7 @@ class I2IHiresFix(scripts.Script):
 
     def ui(self, is_img2img):
         with gr.Accordion(label='img2img Hires Fix', open=False):
-            enable = gr.Checkbox(label='Enable extension', value=False)
+            enable = gr.Checkbox(label='Enabled', value=False)
 
             with gr.Row():
                 upscaler = gr.Dropdown([x.name for x in shared.sd_upscalers], label='Upscaler', value=self.upscaler)
