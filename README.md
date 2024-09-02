@@ -3,7 +3,8 @@
 * Inspired by wcde/custom-hires-fix-for-automatic1111, which has been archived and isn't functioning since 2023.
 * Simple 150 lines extension with minimized features and dependency.
 * It also works in text2img, you can check the consistency between the Original "Hires. fix" and this extension.
-* I made this because I need this feature🤣 If you upscale using/before img2img, it will break the anatomy.
+* I made this because I need this feature🤣
+* Originally, if you upscale using/before img2img, the anatomy will be broken at higher resolution. (See the example)
 
 ![Image text](https://i.imgur.com/aw49zAB.png)
 
