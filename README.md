@@ -2,7 +2,7 @@
 * Hires fix right after the img2img process, using its latent.
 * Inspired by wcde/custom-hires-fix-for-automatic1111, which has been archived and isn't functioning since 2023.
 * Simple 150 lines extension with minimized features and dependency.
-* It also works in text2img, you can check the consistency between the Original "Hires. fix" and this extension.
+* It also works in txt2img, you can check the consistency between the Original "Hires. fix" and this extension.
 * I made this because I need this feature🤣
 * (Originally, if you upscale using/before img2img, the anatomy will be broken at higher resolution.)
 
@@ -19,7 +19,7 @@
   <img src="https://i.imgur.com/rHJGLuq.jpeg" alt="Image text" width="48%" />
 </p>
 
-## text2img (800x1200 ⮕ 1200x1800)
+## txt2img (800x1200 ⮕ 1200x1800)
 * img2img-hires-fix
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
