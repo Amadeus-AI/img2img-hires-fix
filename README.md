@@ -20,7 +20,7 @@
   <img src="https://i.imgur.com/jggjAAV.jpeg" alt="Image text" width="48%" />
 </p>
 
-# img2img (800x1200 ⮕ 1200x1800)
+# img2img (800x1200 ⮕ 1200x1800 Blonde)
 * Script/SD-Upscale
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
