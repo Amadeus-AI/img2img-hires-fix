@@ -1,4 +1,3 @@
-# img2img-hires-fix
 ![Image text](https://i.imgur.com/aw49zAB.png)
 * Hires fix right after the img2img process, using its latent.
 * Inspired by wcde/custom-hires-fix-for-automatic1111, which has been archived and isn't functioning since 2023.
