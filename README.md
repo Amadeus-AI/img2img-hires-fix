@@ -23,13 +23,13 @@
 # img2img
 * Script/SD-Upscale
 <p align="center">
-  <img src="https://i.imgur.com/gpkIaxB.jpeg" alt="Image text" width="48%" />
+  <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
   <img src="https://i.imgur.com/rHJGLuq.jpeg" alt="Image text" width="48%" />
 </p>
 
 * img2img-hires-fix
 <p align="center">
-  <img src="https://i.imgur.com/gpkIaxB.jpeg" alt="Image text" width="48%" />
+  <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
   <img src="https://i.imgur.com/brY5QYw.jpeg" alt="Image text" width="48%" />
 </p>
 
