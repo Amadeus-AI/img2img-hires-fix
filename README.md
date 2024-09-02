@@ -8,7 +8,7 @@
 
 ![Image text](https://i.imgur.com/aw49zAB.png)
 
-# img2img (800x1200 ⮕ 1200x1800 Blonde)
+## img2img (800x1200 ⮕ 1200x1800 Blonde)
 * img2img-hires-fix
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
@@ -21,7 +21,7 @@
   <img src="https://i.imgur.com/rHJGLuq.jpeg" alt="Image text" width="48%" />
 </p>
 
-# text2img (800x1200 ⮕ 1200x1800)
+## text2img (800x1200 ⮕ 1200x1800)
 * img2img-hires-fix
 <p align="center">
   <img src="https://i.imgur.com/koO2E5q.jpeg" alt="Image text" width="48%" />
