@@ -1,12 +1,11 @@
 # img2img-hires-fix
+![Image text](https://i.imgur.com/aw49zAB.png)
 * Hires fix right after the img2img process, using its latent.
 * Inspired by wcde/custom-hires-fix-for-automatic1111, which has been archived and isn't functioning since 2023.
 * Simple 150 lines extension with minimized features and dependency.
 * It also works in text2img, you can check the consistency between the Original "Hires. fix" and this extension.
 * I made this because I need this feature🤣
 * (Originally, if you upscale using/before img2img, the anatomy will be broken at higher resolution.)
-
-![Image text](https://i.imgur.com/aw49zAB.png)
 
 ## img2img (800x1200 ⮕ 1200x1800 Blonde)
 * img2img-hires-fix
