@@ -4,7 +4,7 @@
 * Simple 150 lines extension with minimized features and dependency.
 * It also works in text2img, you can check the consistency between the Original "Hires. fix" and this extension.
 * I made this because I need this feature🤣
-* Originally, if you upscale using/before img2img, the anatomy will be broken at higher resolution. (See the example)
+* (Originally, if you upscale using/before img2img, the anatomy will be broken at higher resolution.)
 
 ![Image text](https://i.imgur.com/aw49zAB.png)
 
