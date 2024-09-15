@@ -144,9 +144,9 @@ class I2IHiresFix(scripts.Script):
         self.steps = steps or p.steps
         self.upscaler = upscaler
         self.denoise_strength = denoise_strength
-        self.sampler_name = sampler
+        self.sampler_name = p.sampler_name if sampler == 'Use same sampler' else sampler
         self.cfg = cfg if cfg else p.cfg_scale
-        self.scheduler = scheduler
+        self.scheduler = p.scheduler if scheduler == 'Use same scheduler' else scheduler
 
     def _process_prompt(self, width, height):
         """Process the prompt and negative prompt for conditioning."""
