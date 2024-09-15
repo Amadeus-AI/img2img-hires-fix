@@ -5,7 +5,7 @@ import gradio as gr
 import numpy as np
 from copy import copy
 from PIL import Image
-from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers, script_callbacks
+from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers, script_callbacks, extra_networks
 
 quote_swap = str.maketrans('\'"', '"\'')
 
@@ -26,6 +26,7 @@ class I2IHiresFix(scripts.Script):
         self.upscaler = 'R-ESRGAN 4x+'
         self.denoise_strength = 0.33
         self.cfg = 0
+        self.extra_data = None
 
     def title(self):
         return "img2img Hires Fix"
@@ -153,7 +154,12 @@ class I2IHiresFix(scripts.Script):
         prompt = self.prompt or self.p.prompt.strip()
         negative_prompt = self.negative_prompt or self.p.negative_prompt.strip()
 
+        prompt, self.extra_data = extra_networks.parse_prompt(prompt)
+
         with devices.autocast():
+            if not self.p.disable_extra_networks:
+                extra_networks.activate(self.p, self.extra_data)
+
             if width and height and hasattr(prompt_parser, 'SdConditioning'):
                 c = prompt_parser.SdConditioning([prompt], False, width, height)
                 uc = prompt_parser.SdConditioning([negative_prompt], False, width, height)
@@ -208,6 +214,10 @@ class I2IHiresFix(scripts.Script):
         decoded_sample = torch.clamp((decoded_sample + 1.0) / 2.0, min=0.0, max=1.0).squeeze()
         x_sample = 255.0 * np.moveaxis(decoded_sample.to(torch.float32).cpu().numpy(), 0, 2)
         image = Image.fromarray(x_sample.astype(np.uint8))
+
+        if not self.p.disable_extra_networks and self.extra_data:
+            extra_networks.deactivate(self.p, self.extra_data)
+
         return image
 
 
