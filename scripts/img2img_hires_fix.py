@@ -1,4 +1,5 @@
 import math
+import json
 import torch
 import gradio as gr
 import numpy as np
@@ -6,12 +7,14 @@ from copy import copy
 from PIL import Image
 from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers
 
+quote_swap = str.maketrans('\'"', '"\'')
+
 
 class I2IHiresFix(scripts.Script):
     def __init__(self):
         super().__init__()
         self.p = None
-        self.sampler = None
+        self.sampler_name = None
         self.cond = None
         self.uncond = None
         self.ratio = 2.0
@@ -79,31 +82,62 @@ class I2IHiresFix(scripts.Script):
         enable, *args = args
         if not enable:
             return
-        self._update_internal_state(*args)
+        self._update_internal_state(p, *args)
 
-    def _update_internal_state(self, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler):
+    def before_process_batch(self, p, *args, **kwargs):
+        enable, *args = args
+        if not enable:
+            return
+        p.extra_generation_params['img2img Hires Fix'] = self.create_infotext
+
+    def create_infotext(self, p, *args, **kwargs):
+
+        parameters = {
+            'scale': f'{self.width}x{self.height}' if self.width and self.height else self.ratio,
+            'upscaler': self.upscaler,
+            'denoise': self.denoise_strength,
+        }
+
+        if self.steps != p.steps:
+            parameters['steps'] = self.steps
+        if self.sampler_name != p.sampler_name:
+            parameters['sampler'] = self.sampler_name
+        if self.scheduler != p.scheduler:
+            parameters['scheduler'] = self.scheduler
+        if self.cfg != p.cfg_scale:
+            parameters['cfg'] = self.cfg
+        if self.prompt:
+            parameters['prompt'] = self.prompt
+        if self.negative_prompt:
+            parameters['negative_prompt'] = self.negative_prompt
+
+        return json.dumps(parameters, ensure_ascii=False).translate(quote_swap)
+
+    def _update_internal_state(self, p, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler):
         """Update internal state variables."""
+        assert ratio > 0 or (width > 0 and height > 0), 'Either Upscale by or Resize to width x height muse be none 0'
+
         self.ratio = ratio
         self.width = width
         self.height = height
         self.prompt = prompt.strip()
         self.negative_prompt = negative_prompt.strip()
-        self.steps = steps
+        self.steps = steps or p.steps
         self.upscaler = upscaler
         self.denoise_strength = denoise_strength
-        self.sampler = sampler
+        self.sampler_name = sampler
         self.cfg = cfg
         self.scheduler = scheduler
 
-    def _process_prompt(self):
+    def _process_prompt(self, width, height):
         """Process the prompt and negative prompt for conditioning."""
         prompt = self.prompt or self.p.prompt.strip()
         negative_prompt = self.negative_prompt or self.p.negative_prompt.strip()
 
         with devices.autocast():
-            if self.width and self.height and hasattr(prompt_parser, 'SdConditioning'):
-                c = prompt_parser.SdConditioning([prompt], False, self.width, self.height)
-                uc = prompt_parser.SdConditioning([negative_prompt], False, self.width, self.height)
+            if width and height and hasattr(prompt_parser, 'SdConditioning'):
+                c = prompt_parser.SdConditioning([prompt], False, width, height)
+                uc = prompt_parser.SdConditioning([negative_prompt], False, width, height)
             else:
                 c, uc = [prompt], [negative_prompt]
             self.cond = prompt_parser.get_multicond_learned_conditioning(shared.sd_model, c, self.steps)
@@ -111,16 +145,18 @@ class I2IHiresFix(scripts.Script):
 
     def _generate_image(self, x):
         """Generate the processed image based on the set parameters."""
-        if self.ratio > 0:
-            self.width = int(x.width * self.ratio)
-            self.height = int(x.height * self.ratio)
+        if not (self.width > 0 and self.height > 0) and self.ratio > 0:
+            width = int(x.width * self.ratio)
+            height = int(x.height * self.ratio)
+        else:
+            width, height = self.width, self.height
 
         sd_models.apply_token_merging(self.p.sd_model, self.p.get_token_merging_ratio(for_hr=True) / 2)
 
         with devices.autocast(), torch.inference_mode():
-            self._process_prompt()
+            self._process_prompt(width, height)
 
-        x = images.resize_image(0, x, self.width, self.height, upscaler_name=self.upscaler)
+        x = images.resize_image(0, x, width, height, upscaler_name=self.upscaler)
         image = np.array(x).astype(np.float32) / 255.0
         image = np.moveaxis(image, 2, 0)
         decoded_sample = torch.from_numpy(image).to(shared.device).to(devices.dtype_vae)
@@ -136,7 +172,7 @@ class I2IHiresFix(scripts.Script):
         self.p.rng = rng.ImageRNG(sample.shape[1:], self.p.seeds, subseeds=self.p.subseeds, subseed_strength=self.p.subseed_strength, seed_resize_from_h=self.p.seed_resize_from_h, seed_resize_from_w=self.p.seed_resize_from_w)
         self.p.scheduler = self.scheduler
 
-        sampler = sd_samplers.create_sampler(self.sampler, self.p.sd_model)
+        sampler = sd_samplers.create_sampler(self.sampler_name, self.p.sd_model)
         sample = sampler.sample_img2img(self.p, sample.to(devices.dtype), noise, self.cond, self.uncond, steps=self.steps, image_conditioning=image_conditioning).to(devices.dtype_vae)
 
         self.cond = None
