@@ -3,7 +3,8 @@ import torch
 import gradio as gr
 import numpy as np
 from PIL import Image
-from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, sd_samplers_kdiffusion
+from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, sd_samplers_kdiffusion, ui_components
+
 
 class I2IHiresFix(scripts.Script):
     def __init__(self):
@@ -30,9 +31,7 @@ class I2IHiresFix(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        with gr.Accordion(label='img2img Hires Fix', open=False):
-            enable = gr.Checkbox(label='Enabled', value=False)
-
+        with ui_components.InputAccordion(False, label='img2img Hires Fix') as enable:
             with gr.Row():
                 upscaler = gr.Dropdown([x.name for x in shared.sd_upscalers], label='Upscaler', value=self.upscaler)
                 steps = gr.Slider(minimum=0, maximum=25, step=1, label="Hires steps", value=self.steps)
