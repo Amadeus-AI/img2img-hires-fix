@@ -5,7 +5,7 @@ import gradio as gr
 import numpy as np
 from copy import copy
 from PIL import Image
-from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers
+from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers, script_callbacks
 
 quote_swap = str.maketrans('\'"', '"\'')
 
@@ -25,7 +25,7 @@ class I2IHiresFix(scripts.Script):
         self.steps = 0
         self.upscaler = 'R-ESRGAN 4x+'
         self.denoise_strength = 0.33
-        self.cfg = 5
+        self.cfg = 0
 
     def title(self):
         return "img2img Hires Fix"
@@ -34,8 +34,8 @@ class I2IHiresFix(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
-        sampler_names = [x.name for x in sd_samplers.visible_samplers()]
-        scheduler_names = [x.label for x in sd_schedulers.schedulers]
+        sampler_names = ['Use same sampler'] + [x.name for x in sd_samplers.visible_samplers()]
+        scheduler_names = ['Use same scheduler'] + [x.label for x in sd_schedulers.schedulers]
 
         with ui_components.InputAccordion(False, label='img2img Hires Fix') as enable:
             with gr.Row():
@@ -51,11 +51,32 @@ class I2IHiresFix(scripts.Script):
             with gr.Row():
                 sampler = gr.Dropdown(sampler_names, label='Sampler', value=sampler_names[0])
                 scheduler = gr.Dropdown(label='Schedule type', elem_id=f"{self.tabname}_scheduler", choices=scheduler_names, value=scheduler_names[0])
-                cfg = gr.Slider(minimum=1, maximum=30, step=1, label="CFG Scale", value=self.cfg)
+                cfg = gr.Slider(minimum=0, maximum=30, step=0.5, label="CFG Scale", value=self.cfg)
 
             with gr.Row():
                 prompt = gr.Textbox(label='Prompt', placeholder='Leave empty to use the same prompt as in first pass.', value=self.prompt)
                 negative_prompt = gr.Textbox(label='Negative prompt', placeholder='Leave empty to use the same prompt as in first pass.', value=self.negative_prompt)
+
+        def read_params(d, key, default=None):
+            try:
+                return d['img2img Hires Fix'].get(key, default)
+            except Exception:
+                return default
+
+        self.infotext_fields = [
+            (enable, lambda d: 'img2img Hires Fix' in d),
+            (upscaler, lambda d: read_params(d, 'upscaler')),
+            (steps, lambda d: read_params(d, 'steps', 0)),
+            (denoise_strength, lambda d: read_params(d, 'denoise')),
+            (ratio, lambda d: read_params(d, 'ratio')),
+            (width, lambda d: read_params(d, 'width', 0)),
+            (height, lambda d: read_params(d, 'height', 0)),
+            (sampler, lambda d: read_params(d, 'sampler', 'Use same sampler')),
+            (scheduler, lambda d: read_params(d, 'scheduler', 'Use same scheduler')),
+            (cfg, lambda d: read_params(d, 'cfg', 0)),
+            (prompt, lambda d: read_params(d, 'prompt', '')),
+            (negative_prompt, lambda d: read_params(d, 'negative_prompt', '')),
+        ]
 
         return [enable, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler]
 
@@ -91,13 +112,11 @@ class I2IHiresFix(scripts.Script):
         p.extra_generation_params['img2img Hires Fix'] = self.create_infotext
 
     def create_infotext(self, p, *args, **kwargs):
-
         parameters = {
             'scale': f'{self.width}x{self.height}' if self.width and self.height else self.ratio,
             'upscaler': self.upscaler,
             'denoise': self.denoise_strength,
         }
-
         if self.steps != p.steps:
             parameters['steps'] = self.steps
         if self.sampler_name != p.sampler_name:
@@ -126,7 +145,7 @@ class I2IHiresFix(scripts.Script):
         self.upscaler = upscaler
         self.denoise_strength = denoise_strength
         self.sampler_name = sampler
-        self.cfg = cfg
+        self.cfg = cfg if cfg else p.cfg_scale
         self.scheduler = scheduler
 
     def _process_prompt(self, width, height):
@@ -190,3 +209,23 @@ class I2IHiresFix(scripts.Script):
         x_sample = 255.0 * np.moveaxis(decoded_sample.to(torch.float32).cpu().numpy(), 0, 2)
         image = Image.fromarray(x_sample.astype(np.uint8))
         return image
+
+
+def parse_infotext(infotext, params):
+    try:
+        params['img2img Hires Fix'] = json.loads(params['img2img Hires Fix'].translate(quote_swap))
+        scale = params['img2img Hires Fix']['scale']
+        if isinstance(scale, str):
+            w, _, h = scale.partition('x')
+            params['img2img Hires Fix']['ratio'] = None
+            params['img2img Hires Fix']['width'] = int(w)
+            params['img2img Hires Fix']['height'] = int(h)
+        else:
+            params['img2img Hires Fix']['ratio'] = float(scale)
+            params['img2img Hires Fix']['width'] = 0
+            params['img2img Hires Fix']['height'] = 0
+    except Exception:
+        pass
+
+
+script_callbacks.on_infotext_pasted(parse_infotext)
