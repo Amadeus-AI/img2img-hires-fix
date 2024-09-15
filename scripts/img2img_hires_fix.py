@@ -3,7 +3,7 @@ import torch
 import gradio as gr
 import numpy as np
 from PIL import Image
-from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, sd_samplers_kdiffusion, ui_components, sd_schedulers
+from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers
 
 
 class I2IHiresFix(scripts.Script):
@@ -31,6 +31,7 @@ class I2IHiresFix(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
+        sampler_names = [x.name for x in sd_samplers.visible_samplers()]
         scheduler_names = [x.label for x in sd_schedulers.schedulers]
 
         with ui_components.InputAccordion(False, label='img2img Hires Fix') as enable:
@@ -45,7 +46,7 @@ class I2IHiresFix(scripts.Script):
                 height = gr.Slider(minimum=0, maximum=2048, step=8, label="Resize height to", value=self.height)
 
             with gr.Row():
-                sampler = gr.Dropdown([x.name for x in sd_samplers_kdiffusion.samplers_data_k_diffusion], label='Sampler', value='DPM++ 2M')
+                sampler = gr.Dropdown(sampler_names, label='Sampler', value=sampler_names[0])
                 scheduler = gr.Dropdown(label='Schedule type', elem_id=f"{self.tabname}_scheduler", choices=scheduler_names, value=scheduler_names[0])
                 cfg = gr.Slider(minimum=1, maximum=30, step=1, label="CFG Scale", value=self.cfg)
 
