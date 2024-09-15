@@ -2,6 +2,7 @@ import math
 import torch
 import gradio as gr
 import numpy as np
+from copy import copy
 from PIL import Image
 from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, ui_components, sd_schedulers
 
@@ -10,7 +11,6 @@ class I2IHiresFix(scripts.Script):
     def __init__(self):
         super().__init__()
         self.p = None
-        self.pp = None
         self.sampler = None
         self.cond = None
         self.uncond = None
@@ -59,7 +59,6 @@ class I2IHiresFix(scripts.Script):
     def postprocess_image(self, p, pp, enable, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler):
         if not enable:
             return
-        self._update_internal_state(pp, ratio, width, height, prompt, negative_prompt, steps, upscaler, denoise_strength, sampler, cfg, scheduler)
 
         _, loras_act = extra_networks.parse_prompt(self.prompt)
         extra_networks.activate(p, loras_act)
@@ -68,18 +67,22 @@ class I2IHiresFix(scripts.Script):
 
         with devices.autocast():
             shared.state.nextjob()
+            self.p = copy(p)
             x = self._generate_image(pp.image)
+            self.p = None
 
         sd_models.apply_token_merging(p.sd_model, p.get_token_merging_ratio())
         pp.image = x
         extra_networks.deactivate(p, loras_act)
 
     def process(self, p, *args, **kwargs):
-        self.p = p
+        enable, *args = args
+        if not enable:
+            return
+        self._update_internal_state(*args)
 
-    def _update_internal_state(self, pp, ratio, width, height, prompt, negative_prompt, steps, upscaler, denoise_strength, sampler, cfg, scheduler):
+    def _update_internal_state(self, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler):
         """Update internal state variables."""
-        self.pp = pp
         self.ratio = ratio
         self.width = width
         self.height = height
@@ -88,7 +91,7 @@ class I2IHiresFix(scripts.Script):
         self.steps = steps
         self.upscaler = upscaler
         self.denoise_strength = denoise_strength
-        self.sampler = sd_samplers.create_sampler(sampler, self.p.sd_model)
+        self.sampler = sampler
         self.cfg = cfg
         self.scheduler = scheduler
 
@@ -133,7 +136,11 @@ class I2IHiresFix(scripts.Script):
         self.p.rng = rng.ImageRNG(sample.shape[1:], self.p.seeds, subseeds=self.p.subseeds, subseed_strength=self.p.subseed_strength, seed_resize_from_h=self.p.seed_resize_from_h, seed_resize_from_w=self.p.seed_resize_from_w)
         self.p.scheduler = self.scheduler
 
-        sample = self.sampler.sample_img2img(self.p, sample.to(devices.dtype), noise, self.cond, self.uncond, steps=self.steps, image_conditioning=image_conditioning).to(devices.dtype_vae)
+        sampler = sd_samplers.create_sampler(self.sampler, self.p.sd_model)
+        sample = sampler.sample_img2img(self.p, sample.to(devices.dtype), noise, self.cond, self.uncond, steps=self.steps, image_conditioning=image_conditioning).to(devices.dtype_vae)
+
+        self.cond = None
+        self.uncond = None
 
         devices.torch_gc()
         decoded_sample = processing.decode_first_stage(shared.sd_model, sample)
