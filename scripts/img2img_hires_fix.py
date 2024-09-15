@@ -3,7 +3,7 @@ import torch
 import gradio as gr
 import numpy as np
 from PIL import Image
-from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, sd_samplers_kdiffusion, ui_components
+from modules import scripts, shared, processing, sd_samplers, rng, images, devices, prompt_parser, sd_models, extra_networks, sd_samplers_kdiffusion, ui_components, sd_schedulers
 
 
 class I2IHiresFix(scripts.Script):
@@ -31,12 +31,14 @@ class I2IHiresFix(scripts.Script):
         return scripts.AlwaysVisible
 
     def ui(self, is_img2img):
+        scheduler_names = [x.label for x in sd_schedulers.schedulers]
+
         with ui_components.InputAccordion(False, label='img2img Hires Fix') as enable:
             with gr.Row():
                 upscaler = gr.Dropdown([x.name for x in shared.sd_upscalers], label='Upscaler', value=self.upscaler)
                 steps = gr.Slider(minimum=0, maximum=25, step=1, label="Hires steps", value=self.steps)
                 denoise_strength = gr.Slider(minimum=0.0, maximum=1.0, step=0.01, label="Denoising strength", value=self.denoise_strength)
-            
+
             with gr.Row():
                 ratio = gr.Slider(minimum=0, maximum=4.0, step=0.05, label="Upscale by", value=self.ratio)
                 width = gr.Slider(minimum=0, maximum=2048, step=8, label="Resize width to", value=self.width)
@@ -44,24 +46,25 @@ class I2IHiresFix(scripts.Script):
 
             with gr.Row():
                 sampler = gr.Dropdown([x.name for x in sd_samplers_kdiffusion.samplers_data_k_diffusion], label='Sampler', value='DPM++ 2M')
+                scheduler = gr.Dropdown(label='Schedule type', elem_id=f"{self.tabname}_scheduler", choices=scheduler_names, value=scheduler_names[0])
                 cfg = gr.Slider(minimum=1, maximum=30, step=1, label="CFG Scale", value=self.cfg)
-            
+
             with gr.Row():
                 prompt = gr.Textbox(label='Prompt', placeholder='Leave empty to use the same prompt as in first pass.', value=self.prompt)
                 negative_prompt = gr.Textbox(label='Negative prompt', placeholder='Leave empty to use the same prompt as in first pass.', value=self.negative_prompt)
 
-        return [enable, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg]
+        return [enable, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler]
 
-    def postprocess_image(self, p, pp, enable, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg):
+    def postprocess_image(self, p, pp, enable, ratio, width, height, steps, upscaler, prompt, negative_prompt, denoise_strength, sampler, cfg, scheduler):
         if not enable:
             return
-        self._update_internal_state(pp, ratio, width, height, prompt, negative_prompt, steps, upscaler, denoise_strength, sampler, cfg)
+        self._update_internal_state(pp, ratio, width, height, prompt, negative_prompt, steps, upscaler, denoise_strength, sampler, cfg, scheduler)
 
         _, loras_act = extra_networks.parse_prompt(self.prompt)
         extra_networks.activate(p, loras_act)
         _, loras_deact = extra_networks.parse_prompt(self.negative_prompt)
         extra_networks.deactivate(p, loras_deact)
-        
+
         with devices.autocast():
             shared.state.nextjob()
             x = self._generate_image(pp.image)
@@ -73,7 +76,7 @@ class I2IHiresFix(scripts.Script):
     def process(self, p, *args, **kwargs):
         self.p = p
 
-    def _update_internal_state(self, pp, ratio, width, height, prompt, negative_prompt, steps, upscaler, denoise_strength, sampler, cfg):
+    def _update_internal_state(self, pp, ratio, width, height, prompt, negative_prompt, steps, upscaler, denoise_strength, sampler, cfg, scheduler):
         """Update internal state variables."""
         self.pp = pp
         self.ratio = ratio
@@ -86,6 +89,7 @@ class I2IHiresFix(scripts.Script):
         self.denoise_strength = denoise_strength
         self.sampler = sd_samplers.create_sampler(sampler, self.p.sd_model)
         self.cfg = cfg
+        self.scheduler = scheduler
 
     def _process_prompt(self):
         """Process the prompt and negative prompt for conditioning."""
@@ -108,7 +112,7 @@ class I2IHiresFix(scripts.Script):
             self.height = int(x.height * self.ratio)
 
         sd_models.apply_token_merging(self.p.sd_model, self.p.get_token_merging_ratio(for_hr=True) / 2)
-        
+
         with devices.autocast(), torch.inference_mode():
             self._process_prompt()
 
@@ -120,13 +124,14 @@ class I2IHiresFix(scripts.Script):
         encoded_sample = shared.sd_model.encode_first_stage(decoded_sample.unsqueeze(0).to(devices.dtype_vae))
         sample = shared.sd_model.get_first_stage_encoding(encoded_sample)
         image_conditioning = self.p.img2img_image_conditioning(decoded_sample, sample)
-        
+
         noise = torch.randn_like(sample)
         self.p.denoising_strength = self.denoise_strength
         self.p.cfg_scale = self.cfg
         self.p.batch_size = 1
         self.p.rng = rng.ImageRNG(sample.shape[1:], self.p.seeds, subseeds=self.p.subseeds, subseed_strength=self.p.subseed_strength, seed_resize_from_h=self.p.seed_resize_from_h, seed_resize_from_w=self.p.seed_resize_from_w)
-        
+        self.p.scheduler = self.scheduler
+
         sample = self.sampler.sample_img2img(self.p, sample.to(devices.dtype), noise, self.cond, self.uncond, steps=self.steps, image_conditioning=image_conditioning).to(devices.dtype_vae)
 
         devices.torch_gc()
